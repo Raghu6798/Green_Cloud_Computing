@@ -1,11 +1,10 @@
 apiVersion: custom.greendeploy.io/v1
 kind: VmTemplate
 metadata:
-  name: my-final-test-vm
+  name: my-gdpr-test-vm
+  labels:
+    data_residency: gdpr # The label our GDPR policy looks for
 spec:
-  # --- User-Provided Information Only ---
-  # The 'schedulingLocation' and 'schedulingTime' fields are intentionally left out.
-  # Our system will add them automatically.
-  duration_hours: 8
-  cpu: "2"
-  ram: "4Gi"
+  duration_hours: 10
+  cpu: "10"
+  ram: "8Gi"

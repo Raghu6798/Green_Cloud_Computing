@@ -1,0 +1,89 @@
+import sys
+import json
+import base64
+import requests
+from loguru import logger
+from flask import Flask, request, jsonify
+
+# --- Basic Setup ---
+logger.remove()
+logger.add(sys.stdout, level="INFO", format="{time} {level} {message}")
+app = Flask(__name__)
+
+# --- Configuration ---
+SCHEDULER_URL = "http://scheduler-service.default.svc.cluster.local/schedule"
+
+# --- Webhook Logic ---
+@app.route('/mutate', methods=['POST'])
+def mutate():
+    admission_review_request = request.json
+    uid = admission_review_request["request"]["uid"]
+    
+    try:
+        logger.info(f"Received AdmissionReview request [UID: {uid}]")
+        vm_template = admission_review_request["request"]["object"]
+        vm_spec = vm_template.get("spec", {})
+        
+        # --- (Policy and Scheduling logic remains the same) ---
+        all_possible_regions = ["eu-central-1", "us-east-1", "ap-south-1", "eu-west-1"]
+        eligible_regions = all_possible_regions
+        labels = vm_template.get("metadata", {}).get("labels", {})
+        if labels.get("data_residency") == "gdpr":
+            logger.info(f"[UID: {uid}] GDPR constraint detected. Filtering regions.")
+            eligible_regions = [r for r in all_possible_regions if r.startswith("eu-")]
+
+        scheduler_request_body = {
+            "vm_spec": vm_spec,
+            "constraints": {"eligible_regions": eligible_regions, "deadline_hours": 48}
+        }
+        
+        logger.info(f"[UID: {uid}] Calling scheduler at {SCHEDULER_URL}...")
+        response = requests.post(SCHEDULER_URL, json=scheduler_request_body, timeout=5)
+        response.raise_for_status()
+        optimal_schedule = response.json()
+        logger.info(f"[UID: {uid}] Received optimal schedule: {optimal_schedule}")
+
+        patch = [
+            {"op": "add", "path": "/spec/schedulingLocation", "value": optimal_schedule["region"]},
+            {"op": "add", "path": "/spec/schedulingTime", "value": optimal_schedule["startTimeUTC"]}
+        ]
+        
+        patch_str = base64.b64encode(json.dumps(patch).encode()).decode()
+        
+        # --- THIS IS THE FIX ---
+        # The entire response must be wrapped in a top-level JSON object
+        # that mirrors the AdmissionReview structure.
+        admission_response = {
+            "apiVersion": "admission.k8s.io/v1",
+            "kind": "AdmissionReview",
+            "response": {
+                "uid": uid,
+                "allowed": True,
+                "patchType": "JSONPatch",
+                "patch": patch_str,
+            }
+        }
+        logger.success(f"[UID: {uid}] Mutation successful. Sending patch.")
+        return jsonify(admission_response) # Return the full AdmissionReview object
+
+    except Exception as e:
+        logger.error(f"Webhook failed: {e}")
+        # --- THIS IS ALSO FIXED ---
+        # The error response must also be a valid AdmissionReview object.
+        return jsonify({
+            "apiVersion": "admission.k8s.io/v1",
+            "kind": "AdmissionReview",
+            "response": {
+                "uid": uid,
+                "allowed": False,
+                "status": {"message": str(e)}
+            }
+        })
+
+if __name__ == '__main__':
+    # (This part remains the same)
+    app.run(
+        host='0.0.0.0',
+        port=8443,
+        ssl_context=('/etc/webhook/certs/tls.crt', '/etc/webhook/certs/tls.key')
+    )

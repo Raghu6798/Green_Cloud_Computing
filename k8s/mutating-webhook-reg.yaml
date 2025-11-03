@@ -1,0 +1,25 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: carbon-scheduler-webhook
+  # This annotation is the magic: it tells cert-manager to automatically inject the CA bundle
+  annotations:
+    cert-manager.io/inject-ca-from: default/carbon-webhook-tls
+# The 'spec:' field is removed, and 'webhooks' is now at the top level.
+webhooks:
+  - name: carbonscheduler.greendeploy.io
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: ["custom.greendeploy.io"]
+        apiVersions: ["v1"]
+        resources: ["vmtemplates"]
+    clientConfig:
+      # cert-manager will automatically populate the 'caBundle' field here
+      service:
+        name: webhook-service
+        namespace: default
+        path: "/mutate"
+        port: 443
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Fail

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carbon-webhook
+  template:
+    metadata:
+      labels:
+        app: carbon-webhook
+    spec:
+      containers:
+      - name: webhook
+        # IMPORTANT: You will need to build and push a new Docker image for the webhook
+        image: raghumaverick/carbon-webhook:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8443
+        # Mount the TLS certificates that cert-manager will create
+        volumeMounts:
+        - name: webhook-certs
+          mountPath: /etc/webhook/certs
+          readOnly: true
+      # Define the volume where the TLS secret will be mounted
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: carbon-webhook-tls
