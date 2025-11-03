@@ -34,7 +34,15 @@ spec:
                 ram:
                   type: string
                   description: "The amount of RAM resources required (e.g., '4Gi', '1024Mi')."
-                
+                duration-length:
+                  type: integer
+                  description: "The length of the duration in hours."
+                provider:
+                  type: string
+                  description: "The provider of the VM workload." 
+                maximum_latency:
+                  type: integer
+                  description: "The maximum latency in hours."
                 # --- Fields that your SCHEDULER will add automatically ---
                 schedulingLocation:
                   type: string

@@ -13,6 +13,21 @@ app = Flask(__name__)
 # --- Configuration ---
 SCHEDULER_URL = "http://scheduler-service.default.svc.cluster.local/schedule"
 
+
+GPU_AVAILABILITY = {
+    "nvidia-tesla-t4": ["us-east-1", "us-west-2", "eu-central-1"],
+    "nvidia-a100": ["us-east-1"],
+}
+
+LATENCY_ZONES = {
+    # Regions with low latency (< 50ms) from an origin in Singapore
+    "from_ap-southeast-1": {
+        "ap-south-1", # Mumbai
+        "ap-northeast-1", # Tokyo
+        "ap-southeast-2", # Sydney
+    }
+}
+
 # --- Webhook Logic ---
 @app.route('/mutate', methods=['POST'])
 def mutate():
@@ -25,7 +40,11 @@ def mutate():
         vm_spec = vm_template.get("spec", {})
         
         # --- (Policy and Scheduling logic remains the same) ---
-        all_possible_regions = ["eu-central-1", "us-east-1", "ap-south-1", "eu-west-1"]
+        eligible_regions = {
+            "us-east-1", "us-east-2", "us-west-2",
+            "eu-central-1", "eu-west-1", "eu-west-2",
+            "ap-south-1", "ap-northeast-1", "ap-southeast-2"
+        }
         eligible_regions = all_possible_regions
         labels = vm_template.get("metadata", {}).get("labels", {})
         if labels.get("data_residency") == "gdpr":

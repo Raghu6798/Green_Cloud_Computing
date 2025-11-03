@@ -5,6 +5,6 @@ metadata:
   labels:
     data_residency: gdpr # The label our GDPR policy looks for
 spec:
-  duration_hours: 10
-  cpu: "10"
-  ram: "8Gi"
+  duration_hours: 12
+  cpu: "6"
+  ram: "12Gi"
