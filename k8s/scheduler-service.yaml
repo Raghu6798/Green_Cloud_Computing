@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  # The name of the service, used in the OPA policy's URL.
+  name: scheduler-service
+spec:
+  # 'ClusterIP' makes this service only reachable from within the cluster.
+  type: ClusterIP
+  
+  # This selector tells the service to send traffic to any pod with the 'app: carbon-scheduler' label.
+  selector:
+    app: carbon-scheduler
+    
+  ports:
+    - protocol: TCP
+      # The service will listen on port 80.
+      port: 80
+      # It will forward traffic to port 5000 on the target pod (where Flask is running).
+      targetPort: 5000

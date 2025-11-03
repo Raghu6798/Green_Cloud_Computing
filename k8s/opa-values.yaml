@@ -1,0 +1,23 @@
+# Best Practice: Explicitly disable the default network policy that can block outbound traffic.
+# This solves the silent failure of the http.send call.
+networkPolicy:
+  enabled: false
+
+opa:
+  config:
+    # Disable mTLS, which was causing the "provide credentials" error.
+    authentication:
+      https:
+        enabled: false
+
+# Enable the admission controller (the webhook server).
+admissionController:
+  enabled: true
+  
+  # Tell the Helm chart to load our policy from the ConfigMap.
+  # This correctly sets up the volume mounts AND generates the MutatingWebhookConfiguration
+  # with the correct path and caBundle automatically.
+  policies:
+    schedulerPolicy:
+      configMapName: scheduler-policy
+      rule: kubernetes.admission.main

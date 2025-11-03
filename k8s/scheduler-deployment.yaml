@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carbon-scheduler
+  template:
+    metadata:
+      # This label is crucial. The Service will use it to find this pod.
+      labels:
+        app: carbon-scheduler
+    spec:
+      containers:
+      - name: scheduler
+        # This MUST match the image you pushed to Docker Hub.
+        image: raghumaverick/carbon-scheduler:latest
+        # 'Always' is good for development to ensure you always get fresh images.
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        # Best Practice: Health checks to ensure Kubernetes can manage the pod effectively.
+        # It will periodically call the '/health' endpoint in your Flask app.
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 15 # Wait 15 seconds after start before first check
+          periodSeconds: 20
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 20

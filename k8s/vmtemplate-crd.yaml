@@ -1,0 +1,58 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  # This is the full, unique name of the new resource type in your cluster.
+  # The format is <plural-name>.<group-name>.
+  name: vmtemplates.custom.greendeploy.io
+spec:
+  # A group is like a namespace for API types, preventing name collisions.
+  group: custom.greendeploy.io
+  
+  # Define the versions of this resource. 'v1' is standard.
+  versions:
+    - name: v1
+      # 'served: true' means this version is enabled.
+      served: true
+      # 'storage: true' means this is the version Kubernetes will use to store the object data.
+      storage: true
+      # This section defines the structure and validation rules for your object.
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            # The 'spec' field is the standard place to define the desired state of an object.
+            spec:
+              type: object
+              properties:
+                # --- Fields that the USER will provide ---
+                duration_hours:
+                  type: integer
+                  description: "The total runtime needed for the VM workload in hours."
+                cpu:
+                  type: string
+                  description: "The amount of CPU resources required (e.g., '2', '500m')."
+                ram:
+                  type: string
+                  description: "The amount of RAM resources required (e.g., '4Gi', '1024Mi')."
+                
+                # --- Fields that your SCHEDULER will add automatically ---
+                schedulingLocation:
+                  type: string
+                  description: "The optimal cloud region chosen by the scheduler."
+                schedulingTime:
+                  type: string
+                  format: date-time # Enforces that this string should be a valid timestamp
+                  description: "The optimal UTC start time chosen by the scheduler."
+              # These fields are mandatory for the user to create the object.
+              required: ["duration_hours", "cpu", "ram"]
+
+  # 'Namespaced' means these objects will live inside a specific Kubernetes namespace.
+  scope: Namespaced
+  
+  # Defines the various names Kubernetes will use for this resource.
+  names:
+    plural: vmtemplates       # Used in API calls (e.g., `kubectl get vmtemplates`)
+    singular: vmtemplate      # The singular name
+    kind: VmTemplate          # The 'kind' you will use in your YAML files (e.g., `kind: VmTemplate`)
+    shortNames:
+    - vmt                     # An optional short alias (e.g., `kubectl get vmt`)

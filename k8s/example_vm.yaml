@@ -1,0 +1,11 @@
+apiVersion: custom.greendeploy.io/v1
+kind: VmTemplate
+metadata:
+  name: my-final-test-vm
+spec:
+  # --- User-Provided Information Only ---
+  # The 'schedulingLocation' and 'schedulingTime' fields are intentionally left out.
+  # Our system will add them automatically.
+  duration_hours: 8
+  cpu: "2"
+  ram: "4Gi"
