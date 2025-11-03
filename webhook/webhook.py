@@ -45,15 +45,58 @@ def mutate():
             "eu-central-1", "eu-west-1", "eu-west-2",
             "ap-south-1", "ap-northeast-1", "ap-southeast-2"
         }
-        eligible_regions = all_possible_regions
+        gpu_spec = vm_spec.get("gpu")
+        if gpu_spec:
+            gpu_type = gpu_spec.get("type")
+            logger.info(f"[UID: {uid}] GPU constraint detected: {gpu_type}")
+            if gpu_type in GPU_AVAILABILITY:
+                gpu_regions = set(GPU_AVAILABILITY[gpu_type])
+                eligible_regions.intersection_update(gpu_regions) # Keep only regions that have the GPU
+            else:
+                raise Exception(f"No regions available for GPU type: {gpu_type}")
+            logger.info(f"[UID: {uid}] Regions after GPU filter: {eligible_regions}")
+
+        # 2. Filter by Data Residency
         labels = vm_template.get("metadata", {}).get("labels", {})
-        if labels.get("data_residency") == "gdpr":
-            logger.info(f"[UID: {uid}] GDPR constraint detected. Filtering regions.")
-            eligible_regions = [r for r in all_possible_regions if r.startswith("eu-")]
+        data_residency = labels.get("data_residency")
+        if data_residency == "gdpr":
+            logger.info(f"[UID: {uid}] GDPR constraint detected.")
+            gdpr_regions = {r for r in eligible_regions if r.startswith("eu-")}
+            eligible_regions = gdpr_regions
+            logger.info(f"[UID: {uid}] Regions after GDPR filter: {eligible_regions}")
+        elif data_residency == "usa":
+            logger.info(f"[UID: {uid}] USA data residency constraint detected.")
+            usa_regions = {r for r in eligible_regions if r.startswith("us-")}
+            eligible_regions = usa_regions
+            logger.info(f"[UID: {uid}] Regions after USA filter: {eligible_regions}")
+
+        # 3. Filter by Latency
+        latency_spec = vm_spec.get("latency")
+        if latency_spec:
+            origin = latency_spec.get("from_region")
+            logger.info(f"[UID: {uid}] Latency constraint detected from origin: {origin}")
+            latency_key = f"from_{origin}"
+            if latency_key in LATENCY_ZONES:
+                latency_regions = LATENCY_ZONES[latency_key]
+                eligible_regions.intersection_update(latency_regions)
+            else:
+                # In a real system, you might have a dynamic ping test here.
+                logger.warning(f"[UID: {uid}] No pre-defined latency zone for origin {origin}. Skipping filter.")
+            logger.info(f"[UID: {uid}] Regions after Latency filter: {eligible_regions}")
+
+
+        # --- Final Check and Call to Scheduler ---
+        if not eligible_regions:
+            raise Exception("No eligible regions found after applying all constraints.")
+        
+        logger.info(f"[UID: {uid}] Final eligible regions for scheduling: {list(eligible_regions)}")
 
         scheduler_request_body = {
             "vm_spec": vm_spec,
-            "constraints": {"eligible_regions": eligible_regions, "deadline_hours": 48}
+            "constraints": {
+                "eligible_regions": list(eligible_regions),
+                "deadline_hours": 48
+            }
         }
         
         logger.info(f"[UID: {uid}] Calling scheduler at {SCHEDULER_URL}...")
