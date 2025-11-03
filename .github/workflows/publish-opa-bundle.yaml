@@ -1,0 +1,68 @@
+# A descriptive name for your GitHub Action workflow
+name: Publish OPA Policy Bundle
+
+# --- Trigger Conditions ---
+# This workflow will run automatically when you push a new Git tag
+# that starts with 'v' (e.g., v1.0.0, v1.1.0).
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  # This also allows you to run the workflow manually from the GitHub UI for testing.
+  workflow_dispatch:
+
+# --- Permissions ---
+# The workflow needs permission to write to the OCI registry (Docker Hub).
+permissions:
+  contents: read
+  packages: write
+
+# --- The Job ---
+jobs:
+  build-and-push-bundle:
+    # Use the standard Ubuntu runner provided by GitHub.
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Check out the code from your repository so the workflow can access it.
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Log in to Docker Hub.
+      # Best Practice: Use secrets stored in your GitHub repository's settings.
+      # Go to Your Repo > Settings > Secrets and variables > Actions > New repository secret
+      # Create DOCKERHUB_USERNAME and DOCKERHUB_TOKEN.
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Step 3: Install the OPA command-line tool on the runner.
+      - name: Set up OPA CLI
+        run: |
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64_static
+          chmod +x ./opa
+          sudo mv ./opa /usr/local/bin/
+
+      # Step 4: Extract the Git tag name (e.g., "v1.0.1") to use as the bundle version.
+      - name: Get Version Tag
+        id: get_version
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      # Step 5: Build the OPA bundle from your 'policies' directory and push it.
+      - name: Build and Push OPA Bundle
+        run: |
+          echo "Building and pushing OPA bundle with tag: ${{ env.TAG }}"
+          
+          # 'opa build' creates a 'bundle.tar.gz' file from the 'policies' directory.
+          # The '.' specifies the root of the bundle, so paths inside are relative.
+          opa build -b ./policies -o bundle.tar.gz
+          
+          # 'opa push' uploads the bundle to the specified OCI repository.
+          # The format is <registry>/<username>/<repo_name>:<tag>
+          # Replace 'raghumaverick' with your Docker Hub username.
+          opa push bundle.tar.gz docker.io/raghumaverick/green-cloud-policies:${{ env.TAG }}
+          
+          # Also push a 'latest' tag for easy reference.
+          opa push bundle.tar.gz docker.io/raghumaverick/green-cloud-policies:latest
