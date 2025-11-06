@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 # --- Model and Preprocessing Configuration ---
 TTM_MODEL_PATH = "ibm-granite/granite-timeseries-ttm-r1"
-CONTEXT_LENGTH = 1024
+CONTEXT_LENGTH = 512
 PREDICTION_LENGTH = 96 
 
 # --- Load Model and Preprocessor ONCE at Startup ---
@@ -38,8 +38,7 @@ except Exception as e:
 
 def get_carbon_forecast_for_one_region(hours_to_forecast):
     """Generates a forecast for a single region."""
-    
-    # 1. Simulate fetching the last CONTEXT_LENGTH hours of data
+
     historical_dates = pd.to_datetime(pd.date_range(end=pd.Timestamp.now(tz='UTC'), periods=CONTEXT_LENGTH, freq='h'))
     logger.info(f"Historical dates: {historical_dates}")
     historical_values = torch.randn(CONTEXT_LENGTH).numpy() * 50 + 150

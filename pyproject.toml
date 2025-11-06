@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "azure-identity>=1.25.1",
+    "azure-mgmt-compute>=37.0.1",
+    "boto3>=1.40.67",
+    "google-cloud-compute>=1.40.0",
+    "python-digitalocean>=1.17.0",
+]

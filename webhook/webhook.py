@@ -20,7 +20,6 @@ GPU_AVAILABILITY = {
 }
 
 LATENCY_ZONES = {
-    # Regions with low latency (< 50ms) from an origin in Singapore
     "from_ap-southeast-1": {
         "ap-south-1", # Mumbai
         "ap-northeast-1", # Tokyo
