@@ -1,0 +1,10 @@
+apiVersion: custom.greendeploy.io/v1
+kind: VmTemplate
+metadata:
+  name: batch-job-eu-data
+  labels:
+    data_residency: gdpr # The label that triggers our GDPR policy
+spec:
+  duration_hours: 12
+  cpu: "8"
+  ram: "32Gi"

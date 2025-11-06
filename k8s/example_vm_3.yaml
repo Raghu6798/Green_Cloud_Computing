@@ -1,0 +1,13 @@
+apiVersion: custom.greendeploy.io/v1
+kind: VmTemplate
+metadata:
+  name: ml-training-job-usa
+  labels:
+    data_residency: usa # A new label for USA-only data
+spec:
+  duration_hours: 24
+  cpu: "16"
+  ram: "64Gi"
+  gpu:
+    count: 1
+    type: "nvidia-tesla-t4" # A specific GPU requirement
